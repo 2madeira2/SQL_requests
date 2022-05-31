@@ -1,0 +1,182 @@
+﻿1) Выведите список всех стран и количество городов в них
+
+SELECT country.name AS country_name,
+       count(country.name) AS cities_quantity
+FROM country
+INNER JOIN city ON country.id = id_country
+GROUP BY country.name;
+
+
+___________________________________________________________________________________________________________________
+
+
+2) Получите список женских имен, встречающихся чаще 3-х раз
+
+SELECT name AS womans_name,
+       count(name) AS occurence_frequency
+FROM person
+GROUP BY name
+HAVING COUNT(name) > 3;
+
+
+___________________________________________________________________________________________________________________
+
+
+3) Выведите список разведенных мужчин и одиноких женщин, проживающих в городе Lonzee
+
+SELECT *
+FROM person
+WHERE ((sex = 'M'
+        AND status = 'Divorced')
+       OR (sex = 'F'
+           AND status = 'Single'))
+  AND id_city IN
+    (SELECT id
+     FROM city
+     WHERE city.name = 'Lonzee');
+
+
+___________________________________________________________________________________________________________________
+
+
+5) Выведите посылки, отправленные в мае 2020 года из Франции в Бельгию
+
+SELECT parcel.id_person_from,
+       parcel.id_person_to,
+       parcel.delivery_time,
+       parcel.weight,
+       parcel.departure_date
+FROM parcel
+INNER JOIN person AS personFrom ON parcel.id_person_from = personFrom.id
+INNER JOIN city AS cityFrom ON personFrom.id_city = cityFrom.id
+INNER JOIN country AS countryFrom ON cityFrom.id_country = countryFrom.id
+INNER JOIN person AS personTo ON parcel.id_person_to = personTo.id
+INNER JOIN city AS cityTo ON personTo.id_city = cityTo.id
+INNER JOIN country AS countryTo ON cityTo.id_country = countryTo.id
+WHERE countryFrom.name = 'France'
+  AND countryTo.name = 'Belgium'
+  AND parcel.departure_date BETWEEN '01-05-2020' AND '31-05-2020';
+
+
+____________________________________________________________________________________________________________________
+
+
+6) Выведите список посылок, находящихся в процессе доставки 1 января 2019 года
+
+SELECT *
+FROM parcel
+WHERE (departure_date + (delivery_time * interval '1 hour')) BETWEEN '2019-01-01 00:00:00' AND '2019-12-31 23:59:59';
+
+
+____________________________________________________________________________________________________________________
+
+
+7) Найдите человека, которому была отправлена самая тяжелая посылка
+
+
+SELECT person.id,
+       person.name,
+       person.surname,
+       person.status,
+       person.sex,
+       person.id_city,
+       person.address,
+       person.date_of_birth
+FROM parcel
+INNER JOIN person ON parcel.id_person_to = person.id
+ORDER BY parcel.weight DESC
+LIMIT 1;
+
+_____________________________________________________________________________________________________________________
+
+
+8) Определите количество людей, у которых в адресе указан абонентский ящик (P.O. Box)
+
+SELECT COUNT(address)
+FROM person
+WHERE address LIKE '%P.O. Box%';
+
+
+_____________________________________________________________________________________________________________________
+
+
+9) Выведите таблицу с данными о суммарном весе международных пересылок с разбивкой по месяцам.
+
+SELECT extract(MONTH
+               FROM departure_date),
+       sum(weight)
+FROM parcel
+WHERE
+    (SELECT name
+     FROM country
+     WHERE country.id =
+         (SELECT city.id_country
+          FROM city
+          WHERE city.id =
+              (SELECT person.id_city
+               FROM person
+               WHERE person.id = parcel.id_person_from))) NOT IN
+    (SELECT name
+     FROM country
+     WHERE country.id =
+         (SELECT city.id_country
+          FROM city
+          WHERE city.id =
+              (SELECT person.id_city
+               FROM person
+               WHERE person.id = parcel.id_person_to)))
+GROUP BY extract(MONTH
+                 FROM departure_date);
+
+
+_____________________________________________________________________________________________________________________
+
+
+
+10) Выведите список людей, которые никогда не получали посылки
+
+SELECT *
+FROM person
+WHERE id NOT IN
+    (SELECT id_person_to
+     FROM parcel);
+
+
+
+______________________________________________________________________________________________________________________
+
+
+11) Выведите список людей, проживающих во Франции, которые получали посылки, но сами никогда их не отправляли
+
+SELECT *
+FROM person
+WHERE id NOT IN
+    (SELECT id_person_from
+     FROM parcel)
+  AND id IN
+    (SELECT id_person_to
+     FROM parcel)
+  AND id_city IN
+    (SELECT id
+     FROM city
+     WHERE id_country IN
+         (SELECT id
+          FROM country
+          WHERE name = 'France'));
+
+_____________________________________________________________________________________________________________________
+
+
+12) Выведите 10 первых значений функции факториал (1, 2, 6, 24, 120 и т.д.). Предполагается, что функции Postgres, вычисляющие факториал использоваться не должны 
+
+WITH RECURSIVE FACTORIAL_TABLE AS(
+	SELECT 1 AS number, 1 AS factorial_of_number
+	UNION
+	SELECT number + 1, factorial_of_number * (number + 1)
+	FROM FACTORIAL_TABLE
+	WHERE number < 10
+) SELECT * FROM FACTORIAL_TABLE;
+
+
+_____________________________________________________________________________________________________________________
+
