@@ -1,22 +1,27 @@
-﻿1) Выведите список всех стран и количество городов в них
+1) Выведите список всех стран и количество городов в них
 
 SELECT country.name AS country_name,
        count(country.name) AS cities_quantity
 FROM country
-INNER JOIN city ON country.id = id_country
+LEFT JOIN city ON country.id = id_country
 GROUP BY country.name;
-
 
 ___________________________________________________________________________________________________________________
 
 
 2) Получите список женских имен, встречающихся чаще 3-х раз
 
-SELECT name AS womans_name,
-       count(name) AS occurence_frequency
-FROM person
-GROUP BY name
-HAVING COUNT(name) > 3;
+SELECT 
+  name AS womans_name, 
+  count(name) AS occurence_frequency 
+FROM 
+  person 
+WHERE 
+  sex = 'F' 
+GROUP BY 
+  name 
+HAVING 
+  COUNT(name) > 3;
 
 
 ___________________________________________________________________________________________________________________
@@ -37,6 +42,56 @@ WHERE ((sex = 'M'
 
 
 ___________________________________________________________________________________________________________________
+
+
+4) Выведите список стран, в которых количество разведенных мужчин превышает количество одиноких женщин
+
+
+WITH man_table AS(
+  SELECT 
+    country.name AS country_name, 
+    count(person) AS quantity 
+  FROM 
+    country 
+    INNER JOIN city ON country.id = city.id_country 
+    INNER JOIN person ON city.id = person.id_city 
+  WHERE 
+    (
+      person.status = 'Divorced' 
+      and person.sex = 'M'
+    ) 
+  GROUP BY 
+    country.id
+), 
+woman_table AS (
+  SELECT 
+    country.name AS country_name, 
+    COUNT(person) AS quantity 
+  FROM 
+    country 
+    INNER JOIN city ON country.id = city.id_country 
+    INNER JOIN person ON city.id = person.id_city 
+  WHERE 
+    (
+      person.status = 'Single' 
+      and person.sex = 'F'
+    ) 
+  GROUP BY 
+    country.id
+) 
+SELECT 
+  man_table.country_name 
+FROM 
+  man_table 
+  INNER JOIN woman_table ON man_table.country_name = woman_table.country_name 
+where 
+  man_table.quantity > woman_table.quantity;
+
+
+
+___________________________________________________________________________________________________________________
+
+
 
 
 5) Выведите посылки, отправленные в мае 2020 года из Франции в Бельгию
@@ -180,3 +235,27 @@ WITH RECURSIVE FACTORIAL_TABLE AS(
 
 _____________________________________________________________________________________________________________________
 
+
+
+14) Добавьте в таблицу parcel столбец для хранения округленного веса и напишите
+    запрос, сохраняющий в этот столбец округленных вес посылки. Вес посылок до 1 кг должен округляться до 100 грамм,
+    1 - 10 кг до 250 грамм, свыше 10 кг до 500 грамм
+
+ALTER TABLE parcel ADD COLUMN rounded_weight INT;
+
+UPDATE 
+  parcel 
+SET 
+  rounded_weight = CASE WHEN (
+    parcel.weight BETWEEN 0 
+    AND 1000
+  ) THEN (
+    round(weight / 100.0) * 100
+  ) WHEN (
+    parcel.weight BETWEEN 1001 
+    AND 10000
+  ) THEN (
+    round(weight / 250.0) * 250
+  ) ELSE (
+    round(parcel.weight / 500.0) * 500
+  ) END;
